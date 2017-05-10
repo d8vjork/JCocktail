@@ -2,18 +2,22 @@ package primary;
 
 import java.awt.FileDialog;
 import javax.swing.*;
-//import org.fife.ui.autocomplete.*;
+import org.fife.ui.autocomplete.*;
 import org.fife.ui.rtextarea.*;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.fife.ui.rsyntaxtextarea.*;
 
 import java.awt.Image;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class Principal extends JFrame {
 
@@ -24,233 +28,305 @@ public class Principal extends JFrame {
     BufferedReader br;
     FileWriter fw;
     BufferedWriter bw;
-    ArrayList<RSyntaxTextArea> textareas;
-    ArrayList<File> openedFiles;
+    ArrayList<Tabs> tabList;
+    Tabs curTab;
     
-    private final String app_version = "v0.6.1-beta";
+    private final String app_version = "v0.8.2-beta";
 
     public Principal() {
+        tabList = new ArrayList();
         initComponents();
-        textareas = new ArrayList();
-        openedFiles = new ArrayList();
-        textareas.add(rTextArea1);
+        curTab = tabList.get(tabs.getSelectedIndex());
     }
 
     private void initComponents() {
 
-        tab1 = new JTabbedPane();
-        jScrollPane1 = new JScrollPane();
-        area = new JTextArea();
-        jMenuBar1 = new JMenuBar();
-        jmOpenFile = new JMenu();
-        jMenuItem1 = new JMenuItem();
+        tabs = new JTabbedPane();
+        jmMenuBar = new JMenuBar();
+        jmFiles = new JMenu();
+        jmOpenFile = new JMenuItem();
         jmSaveFile = new JMenuItem();
-        jmNewTab = new JMenu();
-        jMenuItem3 = new JMenuItem();
-        jMenuItem2 = new JMenuItem();
-        jMenu3 = new JMenu();
-        rTextArea1 = new RSyntaxTextArea();
+        jmSaveAsFile = new JMenuItem();
+        jmEditor = new JMenu();
+        jmDebug = new JMenu();
+        jmNewTab = new JMenuItem();
+        jmCloseTab = new JMenuItem();
+        jmAbout = new JMenu();
+        filler1 = new Box.Filler(new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 0), new java.awt.Dimension(32767, 0));
+        toolbar = new JToolBar();
+        codeLang = new JLabel();
+        fileHash = new JLabel();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        
+        this.setFocusable(true);
+        
         setTitle("Cocktail");
         setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         setIconImage(new ImageIcon(getClass().getResource("app-logo.png")).getImage());
         
-        rTextArea1.setColumns(20);
-        //rTextArea1.setFont(new java.awt.Font("Consolas", 0, 14)); // NOI18N
-        rTextArea1.setCodeFoldingEnabled(true);
-        rTextArea1.setTemplatesEnabled(true);
-        rTextArea1.setRows(5);
-        jScrollPane1.setViewportView(rTextArea1);
+        Tabs newTab = new Tabs("Nuevo");
+        tabList.add(newTab);
+        tabs.addTab(newTab.getTitle(), newTab.getPane());
         
-        setEditorTheme(rTextArea1, "themes/monokai.xml");
-        
-        //area.setColumns(20);
-        //area.setFont(new java.awt.Font("Consolas", 0, 14)); // NOI18N
-        //area.setRows(5);
-        //jScrollPane1.setViewportView(area);
-        
-        tab1.addTab("Nuevo", jScrollPane1);
-
-        jmOpenFile.setText("Archivo");
-
-        jMenuItem1.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, java.awt.event.InputEvent.CTRL_MASK));
-        jMenuItem1.setText("Abrir...");
-        jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItem1ActionPerformed(evt);
+        tabs.addChangeListener(new javax.swing.event.ChangeListener() {
+            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+                tabsStateChanged(evt);
             }
         });
-        jmOpenFile.add(jMenuItem1);
 
-        jmSaveFile.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.CTRL_MASK));
+        jmFiles.setText("Archivo");
+
+        jmOpenFile.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, java.awt.event.InputEvent.CTRL_MASK));
+        jmOpenFile.setText("Abrir...");
+        jmOpenFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jmOpenFileActionPerformed(evt);
+            }
+        });
+        jmFiles.add(jmOpenFile);
+
+        jmSaveFile.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.CTRL_MASK));
         jmSaveFile.setText("Guardar...");
         jmSaveFile.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jmSaveFileActionPerformed(evt);
             }
         });
-        jmOpenFile.add(jmSaveFile);
-
-        jMenuBar1.add(jmOpenFile);
-
-        jmNewTab.setText("Editar");
-
-        jMenuItem3.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_N, java.awt.event.InputEvent.CTRL_MASK));
-        jMenuItem3.setText("Nueva pestaña");
-        jMenuItem3.addActionListener(new java.awt.event.ActionListener() {
+        jmFiles.add(jmSaveFile);
+        
+        jmSaveAsFile.setText("Guardar como...");
+        jmSaveAsFile.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItem3ActionPerformed(evt);
+                jmSaveFileAsActionPerformed(evt);
             }
         });
-        jmNewTab.add(jMenuItem3);
+        jmFiles.add(jmSaveAsFile);
 
-        jMenuItem2.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, java.awt.event.InputEvent.CTRL_MASK));
-        jMenuItem2.setText("Cerrar pestaña");
-        jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+        jmMenuBar.add(jmFiles);
+
+        jmEditor.setText("Editar");
+
+        jmNewTab.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_N, java.awt.event.InputEvent.CTRL_MASK));
+        jmNewTab.setText("Nueva pestaña");
+        jmNewTab.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenuItem2ActionPerformed(evt);
+                jmNewTabActionPerformed(evt);
             }
         });
-        jmNewTab.add(jMenuItem2);
+        jmEditor.add(jmNewTab);
 
-        jMenuBar1.add(jmNewTab);
+        jmCloseTab.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, java.awt.event.InputEvent.CTRL_MASK));
+        jmCloseTab.setText("Cerrar pestaña");
+        jmCloseTab.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jmCloseTabActionPerformed(evt);
+            }
+        });
+        jmEditor.add(jmCloseTab);
 
-        jMenu3.setText("Acerca");
-        jMenu3.addMouseListener(new java.awt.event.MouseAdapter() {
+        jmMenuBar.add(jmEditor);
+
+        jmAbout.setText("Acerca");
+        jmAbout.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
-                jMenu3MouseClicked(evt);
+                jmAboutMouseClicked(evt);
             }
         });
-        jMenu3.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jMenu3ActionPerformed(evt);
+        jmMenuBar.add(jmAbout);
+        
+        jmDebug.setText("Debug");
+        //jmDebug.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F8, 0));
+        jmDebug.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+            	debugKeyPressed(evt);
             }
         });
-        jMenuBar1.add(jMenu3);
+        jmMenuBar.add(jmDebug);
 
-        setJMenuBar(jMenuBar1);
+        setJMenuBar(jmMenuBar);
+        
+        toolbar.setBackground(new java.awt.Color(255, 255, 255));
+        toolbar.setBorder(BorderFactory.createEtchedBorder());
+        toolbar.setFloatable(false);
+        
+        toolbar.add(fileHash);
+        toolbar.add(filler1);
+        toolbar.add(codeLang);
+        
+        tabs.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        GroupLayout layout = new GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
-                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(tab1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 542, Short.MAX_VALUE)
+            layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+            .addComponent(toolbar, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(tabs, GroupLayout.DEFAULT_SIZE, 410, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
-                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(tab1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 400, Short.MAX_VALUE)
+            layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+            .addGroup(GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addComponent(tabs, GroupLayout.DEFAULT_SIZE, 260, Short.MAX_VALUE)
+                .addGap(0, 0, 0)
+                .addComponent(toolbar, GroupLayout.PREFERRED_SIZE, 18, GroupLayout.PREFERRED_SIZE))
         );
-
+        
         pack();
         setLocationRelativeTo(null);
     }
     
-    private void setEditorTheme(RSyntaxTextArea textarea, String tpl) {
-    	try {
-            Theme theme = Theme.load(getClass().getResourceAsStream(tpl));
-            theme.apply(textarea);
-         } catch (IOException ioe) {
-            ioe.printStackTrace();
-         }
+    private void tabsStateChanged(javax.swing.event.ChangeEvent evt) {
+    	fileHash.setText(tabList.get(tabs.getSelectedIndex()).getChecksum());
+    	codeLang.setText(tabList.get(tabs.getSelectedIndex()).getCodeLang());
     }
 
     private void jmSaveFileActionPerformed(java.awt.event.ActionEvent evt) {
+    	int check = -1;
     	
-    	if (searchStringIn(tab1.getTitleAt(tab1.getSelectedIndex()), openedFiles)) {
-    		guardaFichero(openedFiles.get(tab1.getSelectedIndex()).getAbsolutePath());
+    	if (curTab.getFile() != null) {
+    		check = searchFileNamed(curTab.getFile().getName(), tabList);
+    	}
+    	
+    	if (check != -1) {
+    		guardaFichero(curTab.getFile().getAbsolutePath());
     	} else {
 	        FileDialog fd = new FileDialog(this, "Guardar fichero", FileDialog.SAVE);
 	        fd.setVisible(true);
 	        if (fd.getFile() != null) {
-	            // Set filename as tab title
-	            tab1.setTitleAt(tab1.getSelectedIndex(), fd.getFile());
-	            // Set tab icon
-	            detectaFormato(fd.getFile());
-	            guardaFichero(fd.getDirectory() + "\\" + fd.getFile());
-	            openedFiles.add(new File(fd.getDirectory() + "\\" + fd.getFile()));
+	        	String path = fd.getDirectory() + fd.getFile();
+	        	int index = tabs.getSelectedIndex();
+	        	
+	        	// Set filename as tab title and path as tooltip
+	            tabs.setTitleAt(index, fd.getFile());
+	            tabs.setToolTipTextAt(index, path);
+	            
+	            // Save file to path
+	            guardaFichero(path);
+	            
+	            // Update file to currentTab
+	            curTab.setFile(new File(path));
+	            
+	            // Set hash and lang
+	            fileHash.setText(curTab.getChecksum());
+	            codeLang.setText(curTab.getCodeLang());
 	        }
     	}
     }
     
-    private boolean searchStringIn(String name, ArrayList<File> list) {
-    	for (File file : list) {
-    		if (file.getName().equals(new String(name))) {
-    			return true;
+    private void debugKeyPressed(java.awt.event.MouseEvent evt) {
+    	// Print Debug info
+    	System.out.flush();
+    	for (int i = 0; i < tabList.size(); i++) {
+			Tabs cur = tabList.get(i);
+			String filename = "null";
+			
+			if (cur.getFile() != null) {
+				filename = cur.getFile().getName();
+			}
+			
+			System.out.println("title=" + cur.getTitle() + " filename=" + filename + " mime=" + cur.getCodeLang() + " checksum=" + cur.getChecksum());
+		}
+    }
+    
+    private void jmSaveFileAsActionPerformed(java.awt.event.ActionEvent evt) {
+    	FileDialog fd = new FileDialog(this, "Guardar fichero como", FileDialog.SAVE);
+        fd.setVisible(true);
+        
+        if (fd.getFile() != null) {
+        	String path = fd.getDirectory() + fd.getFile();
+        	int index = tabs.getSelectedIndex();
+        	
+            // Set new filename as tab title and new path as tooltip
+            tabs.setTitleAt(index, fd.getFile());
+            tabs.setToolTipTextAt(index, path);
+            
+            // Save file to path
+            guardaFichero(path);
+            
+            // Update file to currentTab
+            curTab.setFile(new File(path));
+            
+            // Set hash and lang
+            fileHash.setText(curTab.getChecksum());
+            codeLang.setText(curTab.getCodeLang());
+        }
+    }
+    
+    private int searchFileNamed(String name, ArrayList<Tabs> tabs) {
+    	int r = -1;
+    	
+    	for (int i = 0; i <= tabs.size()-1; i++) {
+    		if (tabs.get(i).getFile() != null) {
+	    		if (tabs.get(i).getFile().getName().toString() == name) {
+	    			r = i;
+	    			break;
+	    		}
     		}
     	}
     	
-    	return false;
+    	return r;
     }
 
-    private void jMenuItem1ActionPerformed(java.awt.event.ActionEvent evt) {
+    private void jmOpenFileActionPerformed(java.awt.event.ActionEvent evt) {
     	FileDialog fd = new FileDialog(this, "Abrir fichero", FileDialog.LOAD);
         fd.setVisible(true);
     	
         if (fd.getFile() != null) {
-	        if (searchStringIn(fd.getFile(), openedFiles)) {
-	    		// Dont reopen same file again
+        	int check = searchFileNamed(fd.getFile(), tabList);
+        	System.out.println("getFile()=" + fd.getFile() + " check=" + check);
+	        if (check != -1) {
+	        	// Dont reopen same file again
+	        	tabs.setSelectedIndex(check);
+	        	System.out.println("Noup! check=" + check);
 	    	} else {
-	            // Reset current tab textarea
-	            textareas.get(tab1.getSelectedIndex()).setText("");
-	            // Set filename as tab title
-	            tab1.setTitleAt(tab1.getSelectedIndex(), fd.getFile());
-	            // Set tab icon
-	            detectaFormato(fd.getFile());
-	            cargaFichero(fd.getDirectory() + "\\" + fd.getFile());
-	            openedFiles.add(new File(fd.getDirectory() + "\\" + fd.getFile()));
+	    		String path = fd.getDirectory() + fd.getFile();
+	    		Tabs newTab = new Tabs(fd.getFile(), new File(path));
+	    		int index = tabs.getSelectedIndex();
+	    		
+	    		// Add to tablist
+	    		tabList.remove(index);
+	    		tabList.add(index, newTab);
+	    		
+	            // Set filename as tab title and path as tooltip
+	            tabs.setTitleAt(index, fd.getFile());
+	            tabs.setToolTipTextAt(index, path);
+	            
+	            // MD5 Hash
+	            fileHash.setText(newTab.getChecksum());
+	            codeLang.setText(newTab.getCodeLang());
 	        }
     	}
     }
 
-    private void jMenu3ActionPerformed(java.awt.event.ActionEvent evt) {
-        // test
-    }
-
-    private void jMenu3MouseClicked(java.awt.event.MouseEvent evt) {
+    private void jmAboutMouseClicked(java.awt.event.MouseEvent evt) {
         JOptionPane.showMessageDialog(this, "Cocktail Editor " + app_version, "Acerca de", JOptionPane.PLAIN_MESSAGE, new javax.swing.ImageIcon(getClass().getResource("app-logo.png")));
     }
 
     // Open new tab
-    private void jMenuItem3ActionPerformed(java.awt.event.ActionEvent evt) {
-        JScrollPane temp = new JScrollPane();
-        RSyntaxTextArea textarea = new RSyntaxTextArea();
-        
-        tab1.add("Nuevo", temp);
-        textarea.setColumns(20);
-        textarea.setCloseCurlyBraces(true);
-        textarea.setMarginLineEnabled(true);
-        textarea.setCodeFoldingEnabled(true);
-        
-        setEditorTheme(textarea, "themes/monokai.xml");
-        
-        //textarea.setFont(new java.awt.Font("Consolas", 0, 14)); // NOI18N
-        textarea.setRows(5);
-
-        // Add to list
-        textareas.add(textarea);
-
-        temp.setViewportView(textarea);
-        tab1.getComponentAt(tab1.getSelectedIndex());
-        tab1.setSelectedComponent(temp);
+    private void jmNewTabActionPerformed(java.awt.event.ActionEvent evt) {
+        Tabs newTab = new Tabs("Nuevo " + tabList.size());
+        // Add tab to ArrayList
+        tabList.add(newTab);
+        tabs.addTab(newTab.getTitle(), newTab.getPane());
+        // Select this tab
+        //tabs.getComponentAt(tabs.getSelectedIndex());
+        tabs.setSelectedComponent(newTab.getPane());
     }
 
-    // Close current tab
-    private void jMenuItem2ActionPerformed(java.awt.event.ActionEvent evt) {
-        if(tab1.getSelectedIndex() == 0) {
+    private void jmCloseTabActionPerformed(java.awt.event.ActionEvent evt) {
+    	int index = tabs.getSelectedIndex();
+    	
+        if (index == 0) {
         	// Reset current tab textarea
-            textareas.get(tab1.getSelectedIndex()).setText("");
+        	curTab.setTitle("Nuevo");
             // Reset tab title filename and icon
-            tab1.setTitleAt(tab1.getSelectedIndex(), "Nuevo");
-            tab1.setIconAt(tab1.getSelectedIndex(), null);
-            // Delete file from openedFiles
-            openedFiles.remove(tab1.getSelectedIndex());
+            tabs.setTitleAt(index, "Nuevo");
+            tabs.setIconAt(index, null);
+            //tabList.remove(index);
         } else {
-        	tab1.remove(tab1.getSelectedIndex());
-	        // Remove from list
-	        textareas.remove(tab1.getSelectedIndex());
-	        // Delete file from openedFiles
-            openedFiles.remove(tab1.getSelectedIndex());
+        	tabs.remove(index);
+        	// Remove from ArrayList
+	        tabList.remove(index);
         }
     }
 
@@ -260,10 +336,16 @@ public class Principal extends JFrame {
             fr = new FileReader(f);
             br = new BufferedReader(fr);
             String linea;
-
+            
             while ((linea = br.readLine()) != null) {
-                textareas.get(tab1.getSelectedIndex()).append(linea + "\n");
+            	curTab.getTextarea().append(linea + "\n");
             }
+            
+            curTab.setPane();
+            tabs.addTab(curTab.getTitle(), null, curTab.getPane());
+            curTab.getTextarea().setEditable(false);
+            //curTab.setPane();
+            //tabs.getSelectedComponent().getParent().repaint();
 
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error de lectura");
@@ -287,7 +369,7 @@ public class Principal extends JFrame {
             fw = new FileWriter(f);
             bw = new BufferedWriter(fw);
 
-            bw.write(textareas.get(tab1.getSelectedIndex()).getText());
+            bw.write(tabList.get(tabs.getSelectedIndex()).getTextarea().getText());
 
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error de escritura");
@@ -304,55 +386,14 @@ public class Principal extends JFrame {
             }
         }
     }
-
-    void detectaFormato(String filename) {
-        filename = filename.toLowerCase();
-
-        if (filename.endsWith(".html") || filename.endsWith(".htm")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/html.png")));
-        } else if (filename.endsWith(".css") || filename.endsWith(".scss") || filename.endsWith(".sass")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_CSS);
-        	tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/css.png")));
-        } else if (filename.endsWith(".php") || filename.endsWith(".php4") || filename.endsWith(".php5")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PHP);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/php.png")));
-        } else if (filename.endsWith(".sql")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/sql.png")));
-        } else if (filename.endsWith(".js")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/js.png")));
-        } else if (filename.endsWith(".json")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/json.png")));
-        } else if (filename.endsWith(".rb")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/ruby.png")));
-        } else if (filename.endsWith(".py")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/python.png")));
-        } else if (filename.endsWith(".go")) {
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/go.png")));
-        } else if (filename.endsWith(".java")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/java.png")));
-        } else if (filename.endsWith(".d") || filename.endsWith(".h")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_C);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/c.png")));
-        } else if (filename.endsWith(".cs")) {
-        	textareas.get(tab1.getSelectedIndex()).setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_CSHARP);
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/csharp.png")));
-        } else {
-            tab1.setIconAt(tab1.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/other.png")));
-        }
-    }
+    
+    //tabs.setIconAt(tabs.getSelectedIndex(), new javax.swing.ImageIcon(getClass().getResource("icons/other.png")));
 
     public static void main(String args[]) {
         try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Windows".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
             }
@@ -371,18 +412,13 @@ public class Principal extends JFrame {
             new Principal().setVisible(true);
         });
     }
-
-    private JTextArea area;
-    private JMenu jMenu3;
-    private JMenuBar jMenuBar1;
-    private JMenuItem jMenuItem1;
-    private JMenuItem jMenuItem2;
-    private JMenuItem jMenuItem3;
-    private JScrollPane jScrollPane1;
-    private JMenu jmNewTab;
-    private JMenu jmOpenFile;
-    private JMenuItem jmSaveFile;
-    private JTabbedPane tab1;
-    private JPopupMenu.Separator jSeparator1;
-    private RSyntaxTextArea rTextArea1;
+    
+    private Box.Filler filler1;
+    private JMenu jmAbout, jmFiles, jmEditor, jmDebug;
+    private JMenuBar jmMenuBar;
+    private JMenuItem jmOpenFile, jmCloseTab, jmNewTab, jmSaveFile, jmSaveAsFile;
+    private JTabbedPane tabs;
+    private JPopupMenu.Separator jmSeparator;
+    private JToolBar toolbar;
+    private JLabel codeLang, fileHash;
 }
