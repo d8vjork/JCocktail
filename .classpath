@@ -11,5 +11,6 @@
 	<classpathentry kind="lib" path="C:/Users/D8vjork/Documents/JavaLibs/autocomplete-2.6.0.jar"/>
 	<classpathentry kind="lib" path="C:/Users/D8vjork/Documents/JavaLibs/commons-io-2.5.jar"/>
 	<classpathentry kind="lib" path="C:/Users/D8vjork/Documents/JavaLibs/tika-app-1.14.jar"/>
+	<classpathentry kind="lib" path="C:/Users/D8vjork/Documents/JavaLibs/sqlite-jdbc-3.16.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

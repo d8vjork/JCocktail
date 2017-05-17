@@ -1,37 +1,25 @@
 package primary;
 
 import java.awt.FileDialog;
-import javax.swing.*;
-import org.fife.ui.autocomplete.*;
-import org.fife.ui.rtextarea.*;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.fife.ui.rsyntaxtextarea.*;
+import java.awt.event.WindowAdapter;
 
-import java.awt.Image;
+import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeSelectionModel;
+
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Objects;
 
 public class Principal extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 	
-	File f;
-    FileReader fr;
-    BufferedReader br;
-    FileWriter fw;
-    BufferedWriter bw;
-    ArrayList<Tabs> tabList;
-    Tabs curTab;
+    ArrayList<Tab> tabList;
+    Tab curTab;
     
-    private final String app_version = "v0.8.2-beta";
+    private final String app_version = "v0.8.3-beta";
 
     public Principal() {
         tabList = new ArrayList();
@@ -41,10 +29,13 @@ public class Principal extends JFrame {
 
     private void initComponents() {
 
+    	project = new Project();
+    	jScrollPane1 = new JScrollPane();
         tabs = new JTabbedPane();
         jmMenuBar = new JMenuBar();
         jmFiles = new JMenu();
         jmOpenFile = new JMenuItem();
+        jmOpenFolder = new JMenuItem();
         jmSaveFile = new JMenuItem();
         jmSaveAsFile = new JMenuItem();
         jmEditor = new JMenu();
@@ -57,7 +48,18 @@ public class Principal extends JFrame {
         codeLang = new JLabel();
         fileHash = new JLabel();
 
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        
+        // Execute on close window
+        addWindowListener(new java.awt.event.WindowAdapter()
+        {
+            public void windowClosing(java.awt.event.WindowEvent e)
+            {
+                //System.out.println("Exiting...");
+                project.saveProject();
+            	System.exit(0);
+            }
+        });
         
         this.setFocusable(true);
         
@@ -65,31 +67,53 @@ public class Principal extends JFrame {
         setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         setIconImage(new ImageIcon(getClass().getResource("app-logo.png")).getImage());
         
-        Tabs newTab = new Tabs("Nuevo");
+        Tab newTab = new Tab("Nuevo");
         tabList.add(newTab);
         tabs.addTab(newTab.getTitle(), newTab.getPane());
         
         tabs.addChangeListener(new javax.swing.event.ChangeListener() {
-            public void stateChanged(javax.swing.event.ChangeEvent evt) {
+            @Override
+			public void stateChanged(javax.swing.event.ChangeEvent evt) {
                 tabsStateChanged(evt);
             }
         });
+        
+        /*curPro.getTree().setExpandsSelectedPaths(false);
+        curPro.getTree().getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+        curPro.getTree().addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+			public void mouseClicked(java.awt.event.MouseEvent evt) {
+            	jFileTreeMouseClicked(evt);
+            }
+        });*/
 
         jmFiles.setText("Archivo");
 
         jmOpenFile.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_O, java.awt.event.InputEvent.CTRL_MASK));
         jmOpenFile.setText("Abrir...");
         jmOpenFile.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
+            @Override
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jmOpenFileActionPerformed(evt);
             }
         });
         jmFiles.add(jmOpenFile);
 
+        jmOpenFolder.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_K, java.awt.event.InputEvent.CTRL_MASK));
+        jmOpenFolder.setText("Abrir carpeta...");
+        jmOpenFolder.addActionListener(new java.awt.event.ActionListener() {
+            @Override
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jmOpenFolderActionPerformed(evt);
+            }
+        });
+        jmFiles.add(jmOpenFolder);
+        
         jmSaveFile.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.CTRL_MASK));
         jmSaveFile.setText("Guardar...");
         jmSaveFile.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
+            @Override
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jmSaveFileActionPerformed(evt);
             }
         });
@@ -97,7 +121,8 @@ public class Principal extends JFrame {
         
         jmSaveAsFile.setText("Guardar como...");
         jmSaveAsFile.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
+            @Override
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jmSaveFileAsActionPerformed(evt);
             }
         });
@@ -110,7 +135,8 @@ public class Principal extends JFrame {
         jmNewTab.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_N, java.awt.event.InputEvent.CTRL_MASK));
         jmNewTab.setText("Nueva pestaña");
         jmNewTab.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
+            @Override
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jmNewTabActionPerformed(evt);
             }
         });
@@ -119,7 +145,8 @@ public class Principal extends JFrame {
         jmCloseTab.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_T, java.awt.event.InputEvent.CTRL_MASK));
         jmCloseTab.setText("Cerrar pestaña");
         jmCloseTab.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
+            @Override
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jmCloseTabActionPerformed(evt);
             }
         });
@@ -129,16 +156,17 @@ public class Principal extends JFrame {
 
         jmAbout.setText("Acerca");
         jmAbout.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
+            @Override
+			public void mouseClicked(java.awt.event.MouseEvent evt) {
                 jmAboutMouseClicked(evt);
             }
         });
         jmMenuBar.add(jmAbout);
         
         jmDebug.setText("Debug");
-        //jmDebug.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F8, 0));
         jmDebug.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
+            @Override
+			public void mouseClicked(java.awt.event.MouseEvent evt) {
             	debugKeyPressed(evt);
             }
         });
@@ -152,6 +180,8 @@ public class Principal extends JFrame {
         
         toolbar.add(fileHash);
         toolbar.add(filler1);
+        
+        codeLang.setText("text/plain");
         toolbar.add(codeLang);
         
         tabs.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -161,14 +191,19 @@ public class Principal extends JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(GroupLayout.Alignment.LEADING)
             .addComponent(toolbar, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addComponent(tabs, GroupLayout.DEFAULT_SIZE, 410, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(jScrollPane1, GroupLayout.DEFAULT_SIZE, 186, Short.MAX_VALUE)
+                .addGap(0, 0, 0)
+                .addComponent(tabs, GroupLayout.DEFAULT_SIZE, 353, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(GroupLayout.Alignment.LEADING)
             .addGroup(GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addComponent(tabs, GroupLayout.DEFAULT_SIZE, 260, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1, GroupLayout.DEFAULT_SIZE, 259, Short.MAX_VALUE)
+                    .addComponent(tabs))
                 .addGap(0, 0, 0)
-                .addComponent(toolbar, GroupLayout.PREFERRED_SIZE, 18, GroupLayout.PREFERRED_SIZE))
+                .addComponent(toolbar, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
         );
         
         pack();
@@ -179,6 +214,14 @@ public class Principal extends JFrame {
     	fileHash.setText(tabList.get(tabs.getSelectedIndex()).getChecksum());
     	codeLang.setText(tabList.get(tabs.getSelectedIndex()).getCodeLang());
     }
+    
+    private void jFileTreeMouseClicked(java.awt.event.MouseEvent evt) {
+    	Object that = project.getTree().getLastSelectedPathComponent();
+    	DefaultMutableTreeNode selected = (DefaultMutableTreeNode) project.getTree().getSelectionPath().getLastPathComponent();
+    	//if ()
+    	//this.openNewTab(that.toString());
+    	System.out.println(selected.getUserObject());
+    }
 
     private void jmSaveFileActionPerformed(java.awt.event.ActionEvent evt) {
     	int check = -1;
@@ -188,9 +231,14 @@ public class Principal extends JFrame {
     	}
     	
     	if (check != -1) {
-    		guardaFichero(curTab.getFile().getAbsolutePath());
+    		try {
+				IO.writeFile(curTab.getFile().getAbsolutePath()).write(curTab.getTextarea().getText());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
     	} else {
-	        FileDialog fd = new FileDialog(this, "Guardar fichero", FileDialog.SAVE);
+	        FileDialog fd = new FileDialog(this, "Guardar...", FileDialog.SAVE);
 	        fd.setVisible(true);
 	        if (fd.getFile() != null) {
 	        	String path = fd.getDirectory() + fd.getFile();
@@ -201,12 +249,17 @@ public class Principal extends JFrame {
 	            tabs.setToolTipTextAt(index, path);
 	            
 	            // Save file to path
-	            guardaFichero(path);
+	            try {
+					IO.writeFile(path).write(curTab.getTextarea().getText());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 	            
 	            // Update file to currentTab
 	            curTab.setFile(new File(path));
 	            
-	            // Set hash and lang
+	            // Set hash and code syntax language
 	            fileHash.setText(curTab.getChecksum());
 	            codeLang.setText(curTab.getCodeLang());
 	        }
@@ -215,9 +268,9 @@ public class Principal extends JFrame {
     
     private void debugKeyPressed(java.awt.event.MouseEvent evt) {
     	// Print Debug info
-    	System.out.flush();
+    	//System.out.flush();
     	for (int i = 0; i < tabList.size(); i++) {
-			Tabs cur = tabList.get(i);
+			Tab cur = tabList.get(i);
 			String filename = "null";
 			
 			if (cur.getFile() != null) {
@@ -229,7 +282,7 @@ public class Principal extends JFrame {
     }
     
     private void jmSaveFileAsActionPerformed(java.awt.event.ActionEvent evt) {
-    	FileDialog fd = new FileDialog(this, "Guardar fichero como", FileDialog.SAVE);
+    	FileDialog fd = new FileDialog(this, "Guardar como...", FileDialog.SAVE);
         fd.setVisible(true);
         
         if (fd.getFile() != null) {
@@ -241,18 +294,23 @@ public class Principal extends JFrame {
             tabs.setToolTipTextAt(index, path);
             
             // Save file to path
-            guardaFichero(path);
+            try {
+				IO.writeFile(path).write(curTab.getTextarea().getText());;
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
             
             // Update file to currentTab
             curTab.setFile(new File(path));
             
-            // Set hash and lang
+            // Set hash and code syntax language
             fileHash.setText(curTab.getChecksum());
             codeLang.setText(curTab.getCodeLang());
         }
     }
     
-    private int searchFileNamed(String name, ArrayList<Tabs> tabs) {
+    private int searchFileNamed(String name, ArrayList<Tab> tabs) {
     	int r = -1;
     	
     	for (int i = 0; i <= tabs.size()-1; i++) {
@@ -268,7 +326,7 @@ public class Principal extends JFrame {
     }
 
     private void jmOpenFileActionPerformed(java.awt.event.ActionEvent evt) {
-    	FileDialog fd = new FileDialog(this, "Abrir fichero", FileDialog.LOAD);
+    	FileDialog fd = new FileDialog(this, "Abrir...", FileDialog.LOAD);
         fd.setVisible(true);
     	
         if (fd.getFile() != null) {
@@ -280,12 +338,30 @@ public class Principal extends JFrame {
 	        	System.out.println("Noup! check=" + check);
 	    	} else {
 	    		String path = fd.getDirectory() + fd.getFile();
-	    		Tabs newTab = new Tabs(fd.getFile(), new File(path));
+	    		Tab newTab = new Tab(fd.getFile(), new File(path));
 	    		int index = tabs.getSelectedIndex();
+	    		BufferedReader br;
 	    		
 	    		// Add to tablist
 	    		tabList.remove(index);
 	    		tabList.add(index, newTab);
+	    		tabs.setIconAt(index, new ImageIcon(getClass().getResource("icons/" + tabList.get(index).getFileExt() + ".png")));
+	    		//System.out.println("icons/" + tabList.get(index).getFileExt() + ".png");
+	    		
+	    		// Read file and fill textarea
+	    		try {
+	    			br = IO.readFile(path);
+	    			String line;
+	    			
+	    			while ((line = br.readLine()) != null) {
+	    				//tabList.get(index).getTextarea().append(line + "\n");
+	                	curTab.getTextarea().append(line + "\n");
+	                }
+	    			
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 	    		
 	            // Set filename as tab title and path as tooltip
 	            tabs.setTitleAt(index, fd.getFile());
@@ -297,20 +373,48 @@ public class Principal extends JFrame {
 	        }
     	}
     }
+    
+    private void jmOpenFolderActionPerformed(java.awt.event.ActionEvent evt) {
+    	JFileChooser fc = new JFileChooser();
+    	fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    	int r = fc.showOpenDialog(this);
+    	
+        if (r == JFileChooser.APPROVE_OPTION) {
+        	project = new Project(fc.getSelectedFile().getParent(), fc.getSelectedFile().getAbsolutePath());
+        	jScrollPane1.setViewportView(project.getTree());
+        }
+    }
 
     private void jmAboutMouseClicked(java.awt.event.MouseEvent evt) {
         JOptionPane.showMessageDialog(this, "Cocktail Editor " + app_version, "Acerca de", JOptionPane.PLAIN_MESSAGE, new javax.swing.ImageIcon(getClass().getResource("app-logo.png")));
     }
 
-    // Open new tab
     private void jmNewTabActionPerformed(java.awt.event.ActionEvent evt) {
-        Tabs newTab = new Tabs("Nuevo " + tabList.size());
-        // Add tab to ArrayList
-        tabList.add(newTab);
-        tabs.addTab(newTab.getTitle(), newTab.getPane());
-        // Select this tab
-        //tabs.getComponentAt(tabs.getSelectedIndex());
-        tabs.setSelectedComponent(newTab.getPane());
+    	this.openNewTab(null);
+    }
+    
+    private void openNewTab(String title) {
+    	// Check if haven't got any open tab
+    	if (tabs.getTabCount() == 0) {
+    		// Create tabs pane
+    	} else {
+    		Tab newTab;
+    		
+    		// If title was given or not
+    		if (title == null) {
+    			newTab = new Tab("Nuevo " + tabList.size());
+    		} else {
+    			newTab = new Tab(title);
+    		}
+    		
+	        // Add tab to ArrayList
+	        tabList.add(newTab);
+	        tabs.addTab(newTab.getTitle(), newTab.getPane());
+	        
+	        // Select this tab
+	        //tabs.getComponentAt(tabs.getSelectedIndex());
+	        tabs.setSelectedComponent(newTab.getPane());
+    	}
     }
 
     private void jmCloseTabActionPerformed(java.awt.event.ActionEvent evt) {
@@ -327,63 +431,6 @@ public class Principal extends JFrame {
         	tabs.remove(index);
         	// Remove from ArrayList
 	        tabList.remove(index);
-        }
-    }
-
-    void cargaFichero(String ruta) {
-        try {
-            f = new File(ruta);
-            fr = new FileReader(f);
-            br = new BufferedReader(fr);
-            String linea;
-            
-            while ((linea = br.readLine()) != null) {
-            	curTab.getTextarea().append(linea + "\n");
-            }
-            
-            curTab.setPane();
-            tabs.addTab(curTab.getTitle(), null, curTab.getPane());
-            curTab.getTextarea().setEditable(false);
-            //curTab.setPane();
-            //tabs.getSelectedComponent().getParent().repaint();
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error de lectura");
-        } finally {
-            try {
-                if (br != null) {
-                    br.close();
-                }
-                if (fr != null) {
-                    fr.close();
-                }
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Error al cerrar fichero");
-            }
-        }
-    }
-
-    void guardaFichero(String ruta) {
-        try {
-            f = new File(ruta);
-            fw = new FileWriter(f);
-            bw = new BufferedWriter(fw);
-
-            bw.write(tabList.get(tabs.getSelectedIndex()).getTextarea().getText());
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error de escritura");
-        } finally {
-            try {
-                if (bw != null) {
-                    bw.close();
-                }
-                if (fw != null) {
-                    fw.close();
-                }
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Error al cerrar fichero");
-            }
         }
     }
     
@@ -413,10 +460,12 @@ public class Principal extends JFrame {
         });
     }
     
+    private Project project;
+    private JScrollPane jScrollPane1;
     private Box.Filler filler1;
     private JMenu jmAbout, jmFiles, jmEditor, jmDebug;
     private JMenuBar jmMenuBar;
-    private JMenuItem jmOpenFile, jmCloseTab, jmNewTab, jmSaveFile, jmSaveAsFile;
+    private JMenuItem jmOpenFile, jmOpenFolder, jmCloseTab, jmNewTab, jmSaveFile, jmSaveAsFile;
     private JTabbedPane tabs;
     private JPopupMenu.Separator jmSeparator;
     private JToolBar toolbar;
