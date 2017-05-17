@@ -7,27 +7,27 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.nio.file.Files;
 
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.tika.Tika;
-import org.apache.tika.mime.MediaType;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.Theme;
 
-class Tab {
+class Tab extends JTabbedPane implements Serializable {
 
 	private String title;
 	private String checksum;
 	private String codeLang;
 	private String file_ext;
 	private JScrollPane pane;
-	private RSyntaxTextArea textarea;
+	private Textarea textarea;
 	private File file;
 	
 	Tab(String title) {
@@ -44,7 +44,7 @@ class Tab {
 	}
 	
 	public void setTextarea() {
-		this.textarea = new RSyntaxTextArea();
+		this.textarea = new Textarea();
 		
 		// RSyntaxTextArea styles and properties 
 		this.textarea.setColumns(20);
@@ -57,7 +57,7 @@ class Tab {
         this.setEditorTheme(this.textarea, "themes/monokai.xml");
 	}
 	
-	public RSyntaxTextArea getTextarea() {
+	public Textarea getTextarea() {
 		return this.textarea;
 	}
 	
@@ -139,7 +139,7 @@ class Tab {
 		return this.file_ext;
 	}
 	
-	private void setEditorTheme(RSyntaxTextArea textarea, String tpl) {
+	private void setEditorTheme(Textarea textarea, String tpl) {
     	try {
             Theme theme = Theme.load(getClass().getResourceAsStream(tpl));
             theme.apply(textarea);

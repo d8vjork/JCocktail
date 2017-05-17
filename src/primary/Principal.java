@@ -16,15 +16,13 @@ public class Principal extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 	
-    ArrayList<Tab> tabList;
     Tab curTab;
     
     private final String app_version = "v0.8.3-beta";
 
     public Principal() {
-        tabList = new ArrayList();
         initComponents();
-        curTab = tabList.get(tabs.getSelectedIndex());
+        curTab = project.getTabs().get(tabs.getSelectedIndex());
     }
 
     private void initComponents() {
@@ -51,11 +49,8 @@ public class Principal extends JFrame {
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         
         // Execute on close window
-        addWindowListener(new java.awt.event.WindowAdapter()
-        {
-            public void windowClosing(java.awt.event.WindowEvent e)
-            {
-                //System.out.println("Exiting...");
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent e) {
                 project.saveProject();
             	System.exit(0);
             }
@@ -68,7 +63,7 @@ public class Principal extends JFrame {
         setIconImage(new ImageIcon(getClass().getResource("app-logo.png")).getImage());
         
         Tab newTab = new Tab("Nuevo");
-        tabList.add(newTab);
+        project.getTabs().add(newTab);
         tabs.addTab(newTab.getTitle(), newTab.getPane());
         
         tabs.addChangeListener(new javax.swing.event.ChangeListener() {
@@ -211,8 +206,10 @@ public class Principal extends JFrame {
     }
     
     private void tabsStateChanged(javax.swing.event.ChangeEvent evt) {
-    	fileHash.setText(tabList.get(tabs.getSelectedIndex()).getChecksum());
-    	codeLang.setText(tabList.get(tabs.getSelectedIndex()).getCodeLang());
+    	// getSelectedIndex() because it change index
+    	fileHash.setText(project.getTabs().get(tabs.getSelectedIndex()).getChecksum());
+    	codeLang.setText(project.getTabs().get(tabs.getSelectedIndex()).getCodeLang());
+    	System.out.println("tabs=" + tabs.getSelectedIndex() + ", project=" + project.getTabs().size());
     }
     
     private void jFileTreeMouseClicked(java.awt.event.MouseEvent evt) {
@@ -227,7 +224,7 @@ public class Principal extends JFrame {
     	int check = -1;
     	
     	if (curTab.getFile() != null) {
-    		check = searchFileNamed(curTab.getFile().getName(), tabList);
+    		check = searchFileNamed(curTab.getFile().getName(), project.getTabs());
     	}
     	
     	if (check != -1) {
@@ -269,8 +266,8 @@ public class Principal extends JFrame {
     private void debugKeyPressed(java.awt.event.MouseEvent evt) {
     	// Print Debug info
     	//System.out.flush();
-    	for (int i = 0; i < tabList.size(); i++) {
-			Tab cur = tabList.get(i);
+    	for (int i = 0; i < project.getTabs().size(); i++) {
+			Tab cur = project.getTabs().get(i);
 			String filename = "null";
 			
 			if (cur.getFile() != null) {
@@ -330,7 +327,7 @@ public class Principal extends JFrame {
         fd.setVisible(true);
     	
         if (fd.getFile() != null) {
-        	int check = searchFileNamed(fd.getFile(), tabList);
+        	int check = searchFileNamed(fd.getFile(), project.getTabs());
         	System.out.println("getFile()=" + fd.getFile() + " check=" + check);
 	        if (check != -1) {
 	        	// Dont reopen same file again
@@ -343,9 +340,9 @@ public class Principal extends JFrame {
 	    		BufferedReader br;
 	    		
 	    		// Add to tablist
-	    		tabList.remove(index);
-	    		tabList.add(index, newTab);
-	    		tabs.setIconAt(index, new ImageIcon(getClass().getResource("icons/" + tabList.get(index).getFileExt() + ".png")));
+	    		project.getTabs().remove(index);
+	    		project.getTabs().add(index, newTab);
+	    		tabs.setIconAt(index, new ImageIcon(getClass().getResource("icons/" + project.getTabs().get(index).getFileExt() + ".png")));
 	    		//System.out.println("icons/" + tabList.get(index).getFileExt() + ".png");
 	    		
 	    		// Read file and fill textarea
@@ -380,6 +377,10 @@ public class Principal extends JFrame {
     	int r = fc.showOpenDialog(this);
     	
         if (r == JFileChooser.APPROVE_OPTION) {
+        	if (new File(fc.getSelectedFile().getAbsolutePath() + File.separator + ".project").exists() == true) {
+        		project.openProject(fc.getSelectedFile().getAbsolutePath());
+        	}
+        	
         	project = new Project(fc.getSelectedFile().getParent(), fc.getSelectedFile().getAbsolutePath());
         	jScrollPane1.setViewportView(project.getTree());
         }
@@ -402,13 +403,13 @@ public class Principal extends JFrame {
     		
     		// If title was given or not
     		if (title == null) {
-    			newTab = new Tab("Nuevo " + tabList.size());
+    			newTab = new Tab("Nuevo " + project.getTabs().size());
     		} else {
     			newTab = new Tab(title);
     		}
     		
 	        // Add tab to ArrayList
-	        tabList.add(newTab);
+    		project.getTabs().add(newTab);
 	        tabs.addTab(newTab.getTitle(), newTab.getPane());
 	        
 	        // Select this tab
@@ -430,7 +431,7 @@ public class Principal extends JFrame {
         } else {
         	tabs.remove(index);
         	// Remove from ArrayList
-	        tabList.remove(index);
+        	project.getTabs().remove(index);
         }
     }
     
